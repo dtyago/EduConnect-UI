@@ -1,58 +1,100 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Input, Button, VStack, Text, useToast } from '@chakra-ui/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Button, Input, VStack, Text, Flex, HStack, Spinner } from '@chakra-ui/react';
 import axios from 'axios';
 
-function Chat({ token, onLogout }) {
+const Chat = ({ token, onLogout }) => {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const toast = useToast();
+  const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const endOfMessagesRef = useRef(null);
 
-  useEffect(() => {
-    axios.get('https://bitbasher-educonnect.hf.space/user/chat', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    .then(response => setMessages(response.data.messages))
-    .catch(() => toast({
-      title: 'Error',
-      description: 'Failed to fetch chat history.',
-      status: 'error',
-      duration: 5000,
-      isClosable: true,
-    }));
-  }, [token]);
-
-  const handleSendMessage = () => {
-    axios.post('https://bitbasher-educonnect.hf.space/user/chat', { message: input }, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    .then(response => {
-      setMessages([...messages, response.data.message]);
-      setInput('');
-    })
-    .catch(() => toast({
-      title: 'Error',
-      description: 'Failed to send message.',
-      status: 'error',
-      duration: 5000,
-      isClosable: true,
-    }));
+  const scrollToBottom = () => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]); // Scroll to bottom every time messages update
+
+  useEffect(() => {
+    // Fetch chat history logic here
+  }, [token]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
+  
+    // Immediately display the user message
+    setMessages(prevMessages => [
+      ...prevMessages,
+      { text: newMessage, type: 'user', name: "You" },
+    ]);
+    setNewMessage(''); // Clear input field
+
+    setIsSending(true); // Start loading
+  
+    try {
+      const payload = { user_input: newMessage };
+  
+      const response = await axios.post('https://bitbasher-educonnect.hf.space/user/chat', { ...payload}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      const { ai_response } = response.data;
+  
+      // Update the chat with AI response
+      setMessages(prevMessages => [
+        ...prevMessages,
+        { text: ai_response, type: 'ai', label: "EduConnect" },
+      ]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Optionally handle error, e.g., show an error message
+    }
+  
+    setIsSending(false); // End loading
+  };
+  
+
   return (
-    <VStack spacing={4} p={5}>
-      <Text fontSize="2xl">EduConnect Chat</Text>
-      <Box w="full" h="xs" overflowY="auto" p={4} borderWidth="1px" borderRadius="lg">
-        {messages.map((msg, index) => (
-          <Box key={index} bg="gray.100" p={2} my={2} borderRadius="md">
-            {msg.text}
+    <VStack spacing={4}>
+      <Button colorScheme="red" alignSelf="flex-end" onClick={() => onLogout(token)}>Logout</Button>
+      <Flex direction="column" p={5} overflowY="auto" bg="gray.100" height="400px" width="100%" css={{
+        '&::-webkit-scrollbar': {
+          width: '4px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'gray',
+          borderRadius: '24px',
+        },
+      }}>
+      {messages.map((msg, index) => (
+        <Flex key={index} justify={msg.type === 'user' ? 'flex-end' : 'flex-start'} w="full">
+          <Box bg={msg.type === 'user' ? 'blue.100' : 'green.100'} p={3} borderRadius="lg" maxWidth="70%">
+            <Text fontSize="md">{msg.text}</Text>
+            {index === messages.length - 1 && isSending && <Spinner ml={4} />}
           </Box>
-        ))}
-      </Box>
-      <Input placeholder="Type your message..." value={input} onChange={(e) => setInput(e.target.value)} />
-      <Button colorScheme="blue" onClick={handleSendMessage}>Send</Button>
-      <Button colorScheme="red" onClick={onLogout}>Logout</Button>
+        </Flex>
+      ))}
+      {/* Invisible element to mark the end of messages */}
+      <div ref={endOfMessagesRef} />
+      </Flex>
+      <HStack width="100%">
+        <Input
+          placeholder="Type your message here..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+          flex="1"
+        />
+        <Button colorScheme="blue" onClick={sendMessage} isLoading={isSending} loadingText="Sending" disabled={isSending}>
+          Send
+        </Button>
+      </HStack>
     </VStack>
   );
-}
+};
 
 export default Chat;
