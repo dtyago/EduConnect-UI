@@ -31,7 +31,7 @@ const Login = ({ onLogin }) => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       onLogin(response.data);
-      toast({ title: "Login successful.", status: "success", duration: 5000, isClosable: true });
+      toast({ title: "Login successful.", status: "success", duration: 3000, isClosable: true });
     } catch (error) {
       toast({ title: "Login failed.", description: error.toString(), status: "error", duration: 5000, isClosable: true });
     }
