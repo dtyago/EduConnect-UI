@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Button, Input, VStack, Text, Flex, HStack, IconButton, useToast, Spinner } from '@chakra-ui/react';
+import { Box, Button, Input, VStack, Text, Flex, HStack, IconButton, useToast, Spinner, Heading } from '@chakra-ui/react';
 import { AttachmentIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
@@ -10,6 +10,7 @@ const Chat = ({ token, onLogout }) => {
   const endOfMessagesRef = useRef(null);
   const toast = useToast();
   const fileInputRef = useRef(null);
+  const userName = sessionStorage.getItem('userName'); // Retrieve the user's name from session storage for display
 
   useEffect(() => {
     // Ensure the latest message is always in view
@@ -55,19 +56,11 @@ const Chat = ({ token, onLogout }) => {
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
 
-    // Immediately display the user message
-    setMessages(prevMessages => [
-      ...prevMessages,
-      { text: newMessage, type: 'user', name: "You" },
-    ]);
-    setNewMessage(''); // Clear input field
-
-
     setIsSending(true); // Indicate message is being sent
 
     try {
       const payload = { user_input: newMessage };
-      const response = await axios.post('https://bitbasher-educonnect.hf.space/user/chat', { ...payload}, {
+      const response = await axios.post('https://bitbasher-educonnect.hf.space/user/chat', payload, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -76,14 +69,21 @@ const Chat = ({ token, onLogout }) => {
 
       const { ai_response } = response.data;
 
-      // Update the chat  AI responses
+      // Update the chat with AI responses
       setMessages(prevMessages => [
         ...prevMessages,
-        { text: ai_response, type: 'ai', label: "EduConnect" },
+        { text: ai_response, type: 'ai', label: "EduConnect AI" },
       ]);
-
+      setNewMessage(''); // Clear input field after sending
     } catch (error) {
       console.error("Error sending message:", error);
+      toast({
+        title: "Message sending failed",
+        description: "Unable to send your message. Please try again later.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsSending(false); // Reset sending state
     }
@@ -91,7 +91,10 @@ const Chat = ({ token, onLogout }) => {
 
   return (
     <Flex direction="column" height="100vh">
-      <Button colorScheme="red" alignSelf="flex-end" m={2} onClick={() => onLogout(token)}>Logout</Button>
+      <Flex justifyContent="space-between" alignItems="center" p={4} bg="blue.100">
+        <Heading size="md">{userName}'s Chat</Heading>
+        <Button colorScheme="red" alignSelf="flex-end" m={2} onClick={onLogout}>Logout</Button>
+      </Flex>
       <Flex flex="1" direction="column-reverse" overflowY="auto" p={5} bg="gray.100">
         {messages.slice().reverse().map((msg, index) => (
           <Flex key={index} justify={msg.type === 'user' ? 'flex-end' : 'flex-start'} w="full">

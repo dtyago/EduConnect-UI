@@ -16,21 +16,37 @@ function App() {
   }, [token]);
 
   const handleLoginSuccess = (data) => {
-    const authToken = data.access_token; // Adjust based on actual structure
-    setToken(authToken);
-    sessionStorage.setItem('token', authToken); // Use sessionStorage for persistence
+    const { access_token, name, user_id, role } = data; // Destructure the new details from the response
+    
+    // Store each piece of information in session storage
+    sessionStorage.setItem('token', access_token);
+    sessionStorage.setItem('userName', name);
+    sessionStorage.setItem('emailId', user_id);
+    sessionStorage.setItem('role', role);
+  
+    setToken(access_token); // Update state
   };
+  
 
   const handleLogout = async () => {
+    // Attempt to notify the backend of logout
     try {
       await axios.post('https://bitbasher-educonnect.hf.space/user/logout', {}, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      setToken(null); // Reset token to null on successful logout
     } catch (error) {
       console.error("Logout failed:", error);
+    } finally {
+      // Clear the token from state and session storage regardless of POST /user/logout outcome
+      setToken(null);
+      sessionStorage.removeItem('token');
+      // Optionally, clear other user-related information from session storage
+      sessionStorage.removeItem('userName');
+      sessionStorage.removeItem('emailId');
+      sessionStorage.removeItem('role');
     }
   };
+  
 
   return (
     <div>
