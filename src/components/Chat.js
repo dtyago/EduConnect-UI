@@ -55,9 +55,14 @@ const Chat = ({ token, onLogout }) => {
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
-
-    setIsSending(true); // Indicate message is being sent
-
+  
+    setIsSending(true); // Start the spinner
+    setMessages(prevMessages => [
+      ...prevMessages,
+      { text: newMessage, type: 'user', name: "You" }, // Ensure user's message is shown
+    ]);
+    setNewMessage(''); // Clear input field after sending
+    
     try {
       const payload = { user_input: newMessage };
       const response = await axios.post('https://bitbasher-educonnect.hf.space/user/chat', payload, {
@@ -65,17 +70,22 @@ const Chat = ({ token, onLogout }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        timeout: 300000, // 5-minute timeout
       });
-
+  
+      // Successfully received response from /user/chat
       const { ai_response } = response.data;
-
-      // Update the chat with AI responses
+  
       setMessages(prevMessages => [
         ...prevMessages,
-        { text: ai_response, type: 'ai', label: "EduConnect AI" },
+        { text: ai_response, type: 'ai', label: "AI" }, // Show AI response
       ]);
-      setNewMessage(''); // Clear input field after sending
+  
     } catch (error) {
+      console.error("Axios request failed:", error.message);
+      if (error.code) {
+        console.error("Error code:", error.code); // 'ECONNABORTED' for timeout
+      }
       console.error("Error sending message:", error);
       toast({
         title: "Message sending failed",
@@ -85,9 +95,10 @@ const Chat = ({ token, onLogout }) => {
         isClosable: true,
       });
     } finally {
-      setIsSending(false); // Reset sending state
+      setIsSending(false); // Stop the spinner
     }
   };
+  
 
   return (
     <Flex direction="column" height="100vh">

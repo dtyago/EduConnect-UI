@@ -8,6 +8,7 @@ function App() {
 
   useEffect(() => {
     // Update token storage in sessionStorage when it changes
+    document.title = 'EduConnect';
     if (token) {
       sessionStorage.setItem('token', token);
     } else {
